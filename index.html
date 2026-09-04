@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="id">
 
 <head>
 
@@ -8,15 +8,16 @@
 
   <meta
     name="viewport"
-    content="width=device-width,
-             initial-scale=1,
-             maximum-scale=1">
+    content="width=device-width, initial-scale=1.0"
+  >
 
-  <title>Barcode Scanner</title>
+  <title>Inventory Barcode Scanner</title>
 
 
   <!--
-    html5-qrcode
+    Library scanner
+    Kamera dijalankan DI GITHUB PAGES,
+    BUKAN di Apps Script.
   -->
 
   <script
@@ -39,149 +40,174 @@
 
       font-family:
         Arial,
-        Helvetica,
         sans-serif;
 
-      background: #111827;
+      background:
+        #111;
 
-      color: white;
+      color:
+        white;
 
     }
 
 
     .container {
 
-      max-width: 600px;
+      max-width:
+        600px;
 
-      margin: auto;
+      margin:
+        auto;
 
     }
 
 
     h1 {
 
-      text-align: center;
+      text-align:
+        center;
 
-      font-size: 24px;
+      font-size:
+        25px;
 
-      margin: 10px 0;
+      margin-bottom:
+        5px;
 
     }
 
 
-    .instruction {
+    .subtitle {
 
-      text-align: center;
+      text-align:
+        center;
 
-      color: #d1d5db;
+      color:
+        #bbb;
 
-      font-size: 14px;
-
-      margin-bottom: 15px;
+      margin-bottom:
+        20px;
 
     }
 
 
     #reader {
 
-      width: 100%;
+      width:
+        100%;
 
-      background: black;
+      background:
+        #000;
 
-      border-radius: 15px;
+      border-radius:
+        12px;
 
-      overflow: hidden;
+      overflow:
+        hidden;
+
+      min-height:
+        300px;
 
     }
 
 
     button {
 
-      width: 100%;
+      width:
+        100%;
 
-      border: none;
+      padding:
+        15px;
 
-      border-radius: 10px;
+      margin-top:
+        12px;
 
-      padding: 15px;
+      border:
+        none;
 
-      margin-top: 12px;
+      border-radius:
+        10px;
 
-      font-size: 17px;
+      font-size:
+        18px;
 
-      font-weight: bold;
+      font-weight:
+        bold;
 
-      cursor: pointer;
+      cursor:
+        pointer;
 
     }
 
 
     #startButton {
 
-      background: #2563eb;
+      background:
+        #1976d2;
 
-      color: white;
+      color:
+        white;
 
     }
 
 
     #stopButton {
 
-      background: #374151;
+      background:
+        #555;
 
-      color: white;
-
-    }
-
-
-    #backButton {
-
-      background: #e5e7eb;
-
-      color: #111827;
+      color:
+        white;
 
     }
 
 
     .result {
 
-      margin-top: 15px;
+      margin-top:
+        15px;
 
-      padding: 15px;
+      padding:
+        15px;
 
-      border-radius: 10px;
+      border-radius:
+        10px;
 
-      background: #064e3b;
+      background:
+        #1b5e20;
 
-      color: white;
+      color:
+        white;
 
-      display: none;
-
-      word-break: break-all;
+      word-break:
+        break-all;
 
     }
 
 
     .error {
 
-      margin-top: 15px;
+      margin-top:
+        15px;
 
-      padding: 15px;
+      padding:
+        15px;
 
-      border-radius: 10px;
+      border-radius:
+        10px;
 
-      background: #7f1d1d;
+      background:
+        #b71c1c;
 
-      color: white;
-
-      display: none;
+      color:
+        white;
 
     }
 
 
     .hidden {
 
-      display: none !important;
+      display:
+        none;
 
     }
 
@@ -202,64 +228,74 @@
   </h1>
 
 
-  <div class="instruction">
+  <div class="subtitle">
 
-    Arahkan kamera ke QR Code atau barcode.
+    Arahkan kamera ke QR Code / Barcode barang
 
   </div>
 
 
+  <!-- AREA KAMERA -->
+
   <div id="reader"></div>
 
 
+  <!-- TOMBOL -->
+
   <button
     id="startButton"
-    onclick="startCamera()">
+    onclick="startScanner()"
+  >
 
-    ▶ MULAI KAMERA
+    📷 MULAI KAMERA
 
   </button>
 
 
   <button
     id="stopButton"
-    class="hidden"
-    onclick="stopCamera()">
+    onclick="stopScanner()"
+  >
 
-    ■ STOP KAMERA
+    ⛔ STOP KAMERA
 
   </button>
 
 
+  <!-- HASIL -->
+
   <div
     id="result"
-    class="result">
-  </div>
+    class="result hidden"
+  ></div>
 
 
   <div
     id="error"
-    class="error">
-  </div>
-
-
-  <button
-    id="backButton"
-    onclick="goBack()">
-
-    ← KEMBALI
-
-  </button>
+    class="error hidden"
+  ></div>
 
 
 </div>
+
 
 
 <script>
 
 
 // ==================================================
-// CONFIG
+// VARIABEL
+// ==================================================
+
+let html5QrCode =
+  null;
+
+let scannerRunning =
+  false;
+
+
+// ==================================================
+// PARAMETER
 // ==================================================
 
 const params =
@@ -273,18 +309,7 @@ const token =
 
 
 // ==================================================
-// VARIABLE
-// ==================================================
-
-let html5QrCode = null;
-
-let scanning = false;
-
-let alreadyScanned = false;
-
-
-// ==================================================
-// STATUS
+// TAMPILKAN ERROR
 // ==================================================
 
 function showError(message) {
@@ -297,123 +322,138 @@ function showError(message) {
   el.textContent =
     message;
 
-  el.style.display =
-    'block';
+  el.classList
+    .remove('hidden');
 
 }
 
 
-function hideError() {
+// ==================================================
+// HASIL SCAN
+// ==================================================
+
+function showResult(code) {
 
   const el =
     document.getElementById(
-      'error'
+      'result'
     );
 
-  el.style.display =
-    'none';
+  el.textContent =
+    'Barcode terbaca: ' +
+    code;
+
+  el.classList
+    .remove('hidden');
 
 }
 
 
 // ==================================================
-// START CAMERA
+// MULAI SCANNER
 // ==================================================
 
-async function startCamera() {
-
-  hideError();
+async function startScanner() {
 
 
-  if (scanning) {
+  // Cegah double start
+  if (scannerRunning) {
+
     return;
+
   }
 
 
-  alreadyScanned = false;
+  document
+    .getElementById('error')
+    .classList
+    .add('hidden');
 
 
-  html5QrCode =
-    new Html5Qrcode(
-      'reader'
+  // Pastikan token ada
+  if (!token) {
+
+    showError(
+      'Token scanner tidak ditemukan. Buka scanner dari aplikasi Inventory Scanner.'
     );
 
+    return;
 
-  const config = {
-
-    fps: 10,
-
-    qrbox: function(
-      viewfinderWidth,
-      viewfinderHeight
-    ) {
-
-      const width =
-        Math.min(
-          Math.floor(
-            viewfinderWidth * 0.90
-          ),
-          500
-        );
-
-
-      const height =
-        Math.min(
-          Math.floor(
-            viewfinderHeight * 0.35
-          ),
-          220
-        );
-
-
-      return {
-        width: width,
-        height: height
-      };
-
-    },
-
-
-    aspectRatio: 1.7777778,
-
-
-    formatsToSupport: [
-
-      Html5QrcodeSupportedFormats.QR_CODE,
-
-      Html5QrcodeSupportedFormats.CODE_128,
-
-      Html5QrcodeSupportedFormats.CODE_39,
-
-      Html5QrcodeSupportedFormats.CODE_93,
-
-      Html5QrcodeSupportedFormats.EAN_13,
-
-      Html5QrcodeSupportedFormats.EAN_8,
-
-      Html5QrcodeSupportedFormats.UPC_A,
-
-      Html5QrcodeSupportedFormats.UPC_E,
-
-      Html5QrcodeSupportedFormats.ITF,
-
-      Html5QrcodeSupportedFormats.DATA_MATRIX
-
-    ]
-
-  };
+  }
 
 
   try {
 
-    // ==========================================
-    // CAMERA BELAKANG
-    // ==========================================
+
+    html5QrCode =
+      new Html5Qrcode(
+        'reader'
+      );
+
+
+    const config = {
+
+      fps: 10,
+
+      qrbox: function(
+        viewfinderWidth,
+        viewfinderHeight
+      ) {
+
+        return {
+
+          width:
+            Math.floor(
+              viewfinderWidth * 0.85
+            ),
+
+          height:
+            Math.min(
+              220,
+              Math.floor(
+                viewfinderHeight * 0.40
+              )
+            )
+
+        };
+
+      },
+
+      formatsToSupport: [
+
+        Html5QrcodeSupportedFormats.QR_CODE,
+
+        Html5QrcodeSupportedFormats.CODE_128,
+
+        Html5QrcodeSupportedFormats.CODE_39,
+
+        Html5QrcodeSupportedFormats.CODE_93,
+
+        Html5QrcodeSupportedFormats.EAN_13,
+
+        Html5QrcodeSupportedFormats.EAN_8,
+
+        Html5QrcodeSupportedFormats.UPC_A,
+
+        Html5QrcodeSupportedFormats.UPC_E,
+
+        Html5QrcodeSupportedFormats.ITF,
+
+        Html5QrcodeSupportedFormats.DATA_MATRIX
+
+      ]
+
+    };
+
+
+    // =================================================
+    // PAKAI KAMERA BELAKANG
+    // =================================================
 
     await html5QrCode.start(
 
       {
-        facingMode: 'environment'
+        facingMode: "environment"
       },
 
       config,
@@ -425,28 +465,12 @@ async function startCamera() {
     );
 
 
-    scanning = true;
-
-
-    document
-      .getElementById(
-        'startButton'
-      )
-      .classList.add(
-        'hidden'
-      );
-
-
-    document
-      .getElementById(
-        'stopButton'
-      )
-      .classList.remove(
-        'hidden'
-      );
+    scannerRunning =
+      true;
 
 
   } catch (error) {
+
 
     console.error(
       error
@@ -454,24 +478,14 @@ async function startCamera() {
 
 
     showError(
-      'Kamera gagal dibuka. ' +
-      'Pastikan izin kamera diberikan kepada browser. ' +
-      'Detail: ' +
+      'Tidak dapat membuka kamera: ' +
       error
     );
 
 
-    // Bersihkan instance
+    scannerRunning =
+      false;
 
-    try {
-
-      if (html5QrCode) {
-        await html5QrCode.clear();
-      }
-
-    } catch (e) {}
-
-    html5QrCode = null;
 
   }
 
@@ -479,7 +493,7 @@ async function startCamera() {
 
 
 // ==================================================
-// SCAN SUCCESS
+// BERHASIL SCAN
 // ==================================================
 
 async function onScanSuccess(
@@ -487,12 +501,12 @@ async function onScanSuccess(
   decodedResult
 ) {
 
-  if (alreadyScanned) {
+
+  if (!scannerRunning) {
+
     return;
+
   }
-
-
-  alreadyScanned = true;
 
 
   const code =
@@ -503,191 +517,114 @@ async function onScanSuccess(
 
   if (!code) {
 
-    alreadyScanned = false;
-
     return;
 
   }
 
 
-  console.log(
-    'Barcode:',
+  // Tandai berhenti
+  scannerRunning =
+    false;
+
+
+  showResult(
     code
   );
 
 
-  // ------------------------------
-  // STOP CAMERA
-  // ------------------------------
+  // Stop kamera
+  try {
 
-  await stopCamera();
+    await html5QrCode.stop();
 
+  } catch (error) {
 
-  // ------------------------------
-  // TAMPILKAN HASIL
-  // ------------------------------
-
-  const resultEl =
-    document.getElementById(
-      'result'
+    console.warn(
+      error
     );
 
-
-  resultEl.textContent =
-    '✓ Hasil scan: ' +
-    code;
+  }
 
 
-  resultEl.style.display =
-    'block';
-
-
-  // ------------------------------
+  // =================================================
   // KIRIM KE APPS SCRIPT
-  // ------------------------------
-
-  sendResult(code);
-
-}
-
-
-// ==================================================
-// SCAN FAILURE
-// ==================================================
-
-function onScanFailure(
-  errorMessage
-) {
-
-  // Tidak perlu menampilkan
-  // setiap frame yang gagal.
-  //
-  // Scanner akan terus mencari
-  // barcode.
-
-}
-
-
-// ==================================================
-// KIRIM HASIL KE APPS SCRIPT
-// ==================================================
-
-function sendResult(code) {
-
-  const message = {
-
-    type: 'BARCODE_SCANNED',
-
-    token: token,
-
-    code: code
-
-  };
-
-
-  // ==========================================
-  // METODE UTAMA
-  // ==========================================
+  // =================================================
 
   if (
     window.opener &&
     !window.opener.closed
   ) {
 
-    try {
 
-      window.opener.postMessage(
-        message,
-        '*'
-      );
+    window.opener.postMessage(
 
+      {
 
-      // Tutup scanner setelah
-      // hasil dikirim.
+        type:
+          'BARCODE_SCANNED',
 
-      setTimeout(
-        function() {
+        token:
+          token,
 
-          try {
+        code:
+          code
 
-            window.close();
+      },
 
-          } catch (e) {}
+      '*'
 
-        },
-        500
-      );
+    );
 
 
-      return;
+    // Beri waktu message dikirim
+    setTimeout(
+      function() {
 
-    } catch (error) {
+        try {
 
-      console.error(
-        'postMessage error:',
-        error
-      );
+          window.close();
 
-    }
+        } catch (e) {}
 
-  }
-
-
-  // ==========================================
-  // FALLBACK
-  // ==========================================
-  //
-  // Jika browser tidak memberikan opener,
-  // kembali ke Apps Script dengan barcode
-  // sebagai parameter URL.
-  //
-  // GANTI URL DI BAWAH INI.
-  //
-
-  const APP_URL =
-    'https://script.google.com/macros/s/AKfycbw6NLDGYGqbElSfJmerD_lZsmOYIH1ytUgbUYtpy-sY1ZZTG3PF6pT8OY7UHAyWpYhD3Q/exec';
+      },
+      500
+    );
 
 
-  if (
-    APP_URL.indexOf(
-      'GANTI_DENGAN'
-    ) >= 0
-  ) {
+  } else {
+
 
     showError(
-      'Barcode berhasil dibaca: ' +
-      code +
-      '. Tetapi APP_URL scanner belum dikonfigurasi.'
+      'Halaman aplikasi utama tidak ditemukan. Silakan kembali ke Inventory Scanner.'
     );
-
-    return;
 
   }
-
-
-  const returnUrl =
-    APP_URL +
-    '?barcode=' +
-    encodeURIComponent(
-      code
-    );
-
-
-  window.location.href =
-    returnUrl;
 
 }
 
 
 // ==================================================
-// STOP CAMERA
+// SCAN GAGAL
 // ==================================================
 
-async function stopCamera() {
+function onScanFailure(errorMessage) {
+
+  // Jangan tampilkan error setiap frame.
+  // Ini normal ketika kamera sedang mencari barcode.
+
+}
+
+
+// ==================================================
+// STOP
+// ==================================================
+
+async function stopScanner() {
+
 
   if (
     !html5QrCode ||
-    !scanning
+    !scannerRunning
   ) {
 
     return;
@@ -701,60 +638,15 @@ async function stopCamera() {
 
   } catch (error) {
 
-    console.error(
-      'Stop camera error:',
+    console.warn(
       error
     );
 
   }
 
 
-  scanning = false;
-
-
-  document
-    .getElementById(
-      'startButton'
-    )
-    .classList.remove(
-      'hidden'
-    );
-
-
-  document
-    .getElementById(
-      'stopButton'
-    )
-    .classList.add(
-      'hidden'
-    );
-
-}
-
-
-// ==================================================
-// BACK
-// ==================================================
-
-function goBack() {
-
-  try {
-
-    if (
-      window.opener &&
-      !window.opener.closed
-    ) {
-
-      window.close();
-
-      return;
-
-    }
-
-  } catch (e) {}
-
-
-  history.back();
+  scannerRunning =
+    false;
 
 }
 
