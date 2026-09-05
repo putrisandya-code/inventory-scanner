@@ -37,15 +37,26 @@ async function startScanner() {
 
   document.getElementById('error').classList.add('hidden');
 
+  // Deteksi apakah scanner dibuka dalam iframe modal
+  const isIframe = window.parent && window.parent !== window;
+
+  // Validasi Token: Lolos jika token ada ATAU running di dalam iframe modal
+  if (!token && !isIframe) {
+    showError(
+      'Token scanner tidak ditemukan. Buka scanner dari aplikasi Inventory Scanner.'
+    );
+    return;
+  }
+
   try {
     html5QrCode = new Html5Qrcode('reader');
 
     const config = {
       fps: 10,
-      qrbox: function(w, h) {
+      qrbox: function(viewfinderWidth, viewfinderHeight) {
         return {
-          width: Math.floor(w * 0.85),
-          height: Math.min(220, Math.floor(h * 0.40))
+          width: Math.floor(viewfinderWidth * 0.85),
+          height: Math.min(220, Math.floor(viewfinderHeight * 0.40))
         };
       },
       formatsToSupport: [
@@ -64,6 +75,7 @@ async function startScanner() {
     );
 
     scannerRunning = true;
+
   } catch (error) {
     console.error(error);
     showError('Tidak dapat membuka kamera: ' + error);
@@ -72,7 +84,7 @@ async function startScanner() {
 }
 
 // ==================================================
-// BERHASIL SCAN & KIRIM KE APPS SCRIPT
+// BERHASIL SCAN
 // ==================================================
 async function onScanSuccess(decodedText, decodedResult) {
   if (!scannerRunning) return;
@@ -89,42 +101,28 @@ async function onScanSuccess(decodedText, decodedResult) {
     console.warn(error);
   }
 
-  // 1. OPSI A: Jika dibuka via Popup Window (window.opener)
-  if (window.opener && !window.opener.closed) {
+  // 1. Pengiriman data jika dibuka di dalam Iframe Modal Apps Script
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: 'BARCODE_SCANNED',
+      token: token,
+      code: code
+    }, '*');
+    window.parent.postMessage(code, '*'); // Fallback raw string
+  } 
+  // 2. Pengiriman data jika dibuka via Window Opener Popup
+  else if (window.opener && !window.opener.closed) {
     window.opener.postMessage({
       type: 'BARCODE_SCANNED',
       token: token,
       code: code
     }, '*');
 
-    setTimeout(() => {
+    setTimeout(function() {
       try { window.close(); } catch (e) {}
     }, 500);
   } 
-  // 2. OPSI B: Jika dibuka via Iframe Modal (window.parent)
-  else if (window.parent && window.parent !== window) {
-    window.parent.postMessage(code, '*');
-  } 
-  // 3. OPSI C: Fallback Redirect Langsung ke Apps Script
-  else if (APPS_SCRIPT_URL && APPS_SCRIPT_URL !== '') {
-    window.location.href = APPS_SCRIPT_URL + '?barcode=' + encodeURIComponent(code);
-  } 
   else {
-    showError('Halaman aplikasi utama tidak ditemukan. Silakan kembali ke Inventory Scanner.');
+    showError('Halaman aplikasi utama tidak ditemukan.');
   }
 }
-
-function onScanFailure(errorMessage) {
-  // Silent failure per frame
-}
-
-async function stopScanner() {
-  if (!html5QrCode || !scannerRunning) return;
-  try {
-    await html5QrCode.stop();
-  } catch (error) {
-    console.warn(error);
-  }
-  scannerRunning = false;
-}
-</script>
